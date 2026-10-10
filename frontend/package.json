@@ -1,0 +1,11 @@
+{
+  "name": "portal-lms-frontend",
+  "version": "1.0.0",
+  "description": "Certificate Management Learning Management System (LMS) Frontend",
+  "author": "K. Deekshitha (24EG107E24) AIML-E",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "serve": "node server.js"
+  }
+}

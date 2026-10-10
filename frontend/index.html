@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Management Learning Management System (LMS)</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">
+                🎓 CertLMS
+            </a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Home</a></li>
+                <li><a href="#courses-section">Courses</a></li>
+                <li><a href="verify.html">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons" id="nav-auth">
+                <a href="login.html" class="btn btn-secondary">Login</a>
+                <a href="register.html" class="btn btn-primary">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Hero Section -->
+        <div class="hero">
+            <span class="student-tag">Project by K.Deekshitha (24EG107E24) &bull; AIML-E</span>
+            <h1>Certificate Management Learning Management System</h1>
+            <p>
+                A comprehensive full-stack platform for course enrollment, online interactive examinations, automated digital certificate generation with QR code security, and public validation.
+            </p>
+            <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                <a href="#courses-section" class="btn btn-accent btn-lg">Browse Courses</a>
+                <a href="verify.html" class="btn btn-secondary btn-lg" style="color: #1e3a8a;">Verify Certificate Online</a>
+            </div>
+        </div>
+
+        <!-- Quick Certificate Verification Widget -->
+        <div class="verification-box">
+            <h3>🔍 Instant Certificate Authenticity Checker</h3>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+                Enter a unique Certificate ID or scan the QR code to verify student credentials directly from our secure database.
+            </p>
+            <form id="verify-form" onsubmit="handleQuickVerify(event)">
+                <div class="search-input-group">
+                    <input type="text" id="quick-cert-id" placeholder="e.g. CERT-2026-XXXXXXXX" required>
+                    <button type="submit" class="btn btn-primary">Verify Now</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Courses Section -->
+        <div id="courses-section" style="margin-top: 3rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                    <h2>Available Learning Courses</h2>
+                    <p style="color: var(--text-muted);">Enroll in certified courses, take assessments, and earn verifiable digital certificates.</p>
+                </div>
+            </div>
+
+            <div class="grid" id="course-list">
+                <div style="text-align: center; grid-column: 1/-1; padding: 2rem; color: var(--text-muted);">
+                    Loading available courses from Spring Boot backend...
+                </div>
+            </div>
+        </div>
+
+        <!-- Key Features Section -->
+        <div style="margin-top: 4rem;">
+            <h2 style="text-align: center; margin-bottom: 2rem;">System Core Features</h2>
+            <div class="grid">
+                <div class="card">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">👨‍🏫</div>
+                        <h3 class="card-title">Role-Based Access</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                            Tailored dashboards for Admin, Instructors, and Students for managing content, exams, and certifications.
+                        </p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📝</div>
+                        <h3 class="card-title">Online Examination</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                            Automated assessment evaluation with instant scoring, pass/fail status, and progress tracking.
+                        </p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📜</div>
+                        <h3 class="card-title">Auto Digital Certificates</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                            Instant PDF certificate generation with student details, course name, score, issue date, and QR code.
+                        </p>
+                    </div>
+                </div>
+                <div class="card">
+                    <div>
+                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">🔐</div>
+                        <h3 class="card-title">QR Code Verification</h3>
+                        <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                            Authenticity verification by scanning the QR code or searching Certificate ID to prevent fraudulent credentials.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | Developed by <strong>K.Deekshitha (24EG107E24) AIML-E</strong> | Powered by Spring Boot, MySQL & Java</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Check session
+        document.addEventListener("DOMContentLoaded", async () => {
+            const user = Auth.getUser();
+            const navAuth = document.getElementById("nav-auth");
+            if (user) {
+                navAuth.innerHTML = `
+                    <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">Hi, ${user.name} (${user.role})</span>
+                    <button onclick="Auth.redirectByRole('${user.role}')" class="btn btn-primary btn-sm">Dashboard</button>
+                    <button onclick="Auth.logout()" class="btn btn-secondary btn-sm">Logout</button>
+                `;
+            }
+
+            // Load courses
+            loadCourses();
+        });
+
+        async function loadCourses() {
+            const courseList = document.getElementById("course-list");
+            try {
+                const courses = await CourseAPI.getAll();
+                if (!courses || courses.length === 0) {
+                    courseList.innerHTML = `<div style="grid-column: 1/-1; text-align: center; color: var(--text-muted);">No courses currently available. Login as Instructor to create courses.</div>`;
+                    return;
+                }
+
+                courseList.innerHTML = courses.map(course => `
+                    <div class="card">
+                        <div>
+                            <div class="card-header">
+                                <span class="badge badge-primary">${course.category || 'General'}</span>
+                                <small style="color: var(--text-muted);">${course.instructor ? course.instructor.name : 'Faculty'}</small>
+                            </div>
+                            <h3 class="card-title">${course.title}</h3>
+                            <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem;">
+                                ${course.description || 'No description provided.'}
+                            </p>
+                        </div>
+                        <div style="margin-top: 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+                            <button onclick="enrollCourse(${course.id})" class="btn btn-primary btn-sm">Enroll Now</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                courseList.innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: #fee2e2; border-radius: 8px; color: #991b1b;">
+                        Unable to connect to Spring Boot backend at http://localhost:8080. Please ensure the backend is running.
+                    </div>
+                `;
+            }
+        }
+
+        async function enrollCourse(courseId) {
+            const user = Auth.getUser();
+            if (!user) {
+                showToast("Please login as a student to enroll!", "warning");
+                setTimeout(() => window.location.href = "login.html", 1500);
+                return;
+            }
+            if (user.role !== "STUDENT") {
+                showToast("Only students can enroll in courses.", "warning");
+                return;
+            }
+
+            try {
+                await CourseAPI.enroll(courseId, user.userId);
+                showToast("Enrolled successfully! Redirecting to student dashboard...", "success");
+                setTimeout(() => window.location.href = "student-dashboard.html", 1200);
+            } catch (err) {
+                showToast(err.message || "Failed to enroll.", "error");
+            }
+        }
+
+        function handleQuickVerify(e) {
+            e.preventDefault();
+            const id = document.getElementById("quick-cert-id").value.trim();
+            if (id) {
+                window.location.href = `verify.html?id=${encodeURIComponent(id)}`;
+            }
+        }
+    </script>
+</body>
+</html>

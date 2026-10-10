@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Certificate Management LMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="verify.html">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <a href="register.html" class="btn btn-secondary">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="form-card">
+            <h2 style="text-align: center; margin-bottom: 0.5rem;">Welcome Back</h2>
+            <p style="text-align: center; color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;">
+                Sign in to your LMS account
+            </p>
+
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" class="form-control" placeholder="name@example.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 0.5rem;">
+                    Sign In
+                </button>
+            </form>
+
+            <div class="demo-credentials">
+                <strong>💡 Quick Demo Logins:</strong><br>
+                <span>Student:</span> <button type="button" class="demo-badge-btn" onclick="fillDemo('student@lms.com', 'stud123')">Student Login</button><br>
+                <span style="display:inline-block; margin-top:4px;">Instructor:</span> <button type="button" class="demo-badge-btn" onclick="fillDemo('instructor@lms.com', 'inst123')">Instructor Login</button><br>
+                <span style="display:inline-block; margin-top:4px;">Admin:</span> <button type="button" class="demo-badge-btn" onclick="fillDemo('admin@lms.com', 'admin123')">Admin Login</button>
+            </div>
+
+            <p style="text-align: center; margin-top: 1.5rem; font-size: 0.9rem; color: var(--text-muted);">
+                Don't have an account? <a href="register.html" style="color: var(--primary); font-weight: 600;">Register here</a>
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        function fillDemo(email, pass) {
+            document.getElementById("email").value = email;
+            document.getElementById("password").value = pass;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value;
+
+            try {
+                const response = await AuthAPI.login(email, password);
+                Auth.setUser(response);
+                showToast("Login successful! Redirecting...", "success");
+                setTimeout(() => {
+                    Auth.redirectByRole(response.role);
+                }, 1000);
+            } catch (err) {
+                showToast(err.message || "Invalid credentials. Please try again.", "error");
+            }
+        }
+    </script>
+</body>
+</html>

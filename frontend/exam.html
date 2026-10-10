@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assessment Portal - CertLMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS</a>
+            <div id="exam-timer-display" style="font-weight: 700; color: #dc2626; font-size: 1.1rem; display: none;">
+                ⏱️ Time Remaining: <span id="time-left">30:00</span>
+            </div>
+            <div>
+                <a href="student-dashboard.html" class="btn btn-secondary btn-sm">Exit Assessment</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Exam Meta Header -->
+        <div id="exam-intro" style="text-align: center; margin-bottom: 2rem;">
+            <h1 id="exam-title" style="color: var(--secondary);">Loading Examination...</h1>
+            <p id="exam-desc" style="color: var(--text-muted); margin-top: 0.5rem;"></p>
+        </div>
+
+        <!-- Questions Container -->
+        <div class="exam-container" id="exam-body" style="display: none;">
+            <form id="assessment-form" onsubmit="handleExamSubmit(event)">
+                <div id="questions-wrapper">
+                    <!-- Dynamic Questions -->
+                </div>
+                <div style="margin-top: 2rem; text-align: center;">
+                    <button type="submit" class="btn btn-primary btn-lg" style="min-width: 250px;">
+                        Submit Examination
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Result View (Hidden Initially) -->
+        <div id="exam-result-view" style="display: none; max-width: 650px; margin: 2rem auto; text-align: center;">
+            <div class="card" style="padding: 2.5rem; border: 2px solid var(--border);">
+                <div id="result-icon" style="font-size: 3.5rem; margin-bottom: 1rem;">🎉</div>
+                <h2 id="result-title" style="margin-bottom: 0.5rem;">Assessment Complete</h2>
+                <p id="result-subtitle" style="color: var(--text-muted);"></p>
+
+                <div style="margin: 2rem 0; padding: 1.5rem; background: #f8fafc; border-radius: var(--radius);">
+                    <div style="font-size: 1.1rem; color: var(--text-muted);">Score Earned</div>
+                    <div id="result-score" style="font-size: 2.5rem; font-weight: 800; color: var(--secondary); margin: 0.25rem 0;">0/0</div>
+                    <div id="result-percentage" style="font-size: 1.25rem; font-weight: 700; color: var(--accent);">0%</div>
+                </div>
+
+                <div id="result-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                    <!-- Injected buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        let currentUser = null;
+        let examId = null;
+        let examData = null;
+        let timerInterval = null;
+
+        document.addEventListener("DOMContentLoaded", async () => {
+            currentUser = Auth.requireAuth(["STUDENT"]);
+            if (!currentUser) return;
+
+            const urlParams = new URLSearchParams(window.location.search);
+            examId = urlParams.get("id");
+
+            if (!examId) {
+                alert("No examination specified!");
+                window.location.href = "student-dashboard.html";
+                return;
+            }
+
+            await loadExam();
+        });
+
+        async function loadExam() {
+            try {
+                examData = await ExamAPI.getById(examId);
+                const questions = await ExamAPI.getExamQuestions(examId);
+
+                if (!questions || questions.length === 0) {
+                    document.getElementById("exam-title").innerText = "No Questions Found";
+                    document.getElementById("exam-desc").innerText = "This exam currently does not have any questions configured.";
+                    return;
+                }
+
+                document.getElementById("exam-title").innerText = examData.title;
+                document.getElementById("exam-desc").innerText = `Course: ${examData.course ? examData.course.title : ''} | Pass Criteria: ${examData.passMarkPercentage}% | Duration: ${examData.durationMinutes} Minutes`;
+
+                // Render questions
+                const wrapper = document.getElementById("questions-wrapper");
+                wrapper.innerHTML = questions.map((q, idx) => `
+                    <div class="question-block" data-qid="${q.id}">
+                        <div class="question-title">
+                            Question ${idx + 1} (${q.marks} Mark${q.marks > 1 ? 's' : ''}): 
+                            <span style="font-weight: 500;">${q.questionText}</span>
+                        </div>
+                        <div class="options-group">
+                            <label class="option-item">
+                                <input type="radio" name="question_${q.id}" value="A" required>
+                                <span>A. ${q.optionA}</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="radio" name="question_${q.id}" value="B">
+                                <span>B. ${q.optionB}</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="radio" name="question_${q.id}" value="C">
+                                <span>C. ${q.optionC}</span>
+                            </label>
+                            <label class="option-item">
+                                <input type="radio" name="question_${q.id}" value="D">
+                                <span>D. ${q.optionD}</span>
+                            </label>
+                        </div>
+                    </div>
+                `).join("");
+
+                document.getElementById("exam-body").style.display = "block";
+
+                // Start Timer
+                startTimer(examData.durationMinutes || 30);
+            } catch (err) {
+                alert("Failed to load exam details: " + err.message);
+                window.location.href = "student-dashboard.html";
+            }
+        }
+
+        function startTimer(durationMinutes) {
+            let secondsLeft = durationMinutes * 60;
+            const timerContainer = document.getElementById("exam-timer-display");
+            const timeDisplay = document.getElementById("time-left");
+            timerContainer.style.display = "block";
+
+            timerInterval = setInterval(() => {
+                secondsLeft--;
+                const mins = Math.floor(secondsLeft / 60);
+                const secs = secondsLeft % 60;
+                timeDisplay.innerText = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+
+                if (secondsLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alert("Time is up! Submitting your exam automatically.");
+                    submitExam();
+                }
+            }, 1000);
+        }
+
+        async function handleExamSubmit(e) {
+            e.preventDefault();
+            if (confirm("Are you sure you want to submit your examination?")) {
+                clearInterval(timerInterval);
+                await submitExam();
+            }
+        }
+
+        async function submitExam() {
+            const questionBlocks = document.querySelectorAll(".question-block");
+            const answers = [];
+
+            questionBlocks.forEach(qb => {
+                const qId = qb.getAttribute("data-qid");
+                const selected = qb.querySelector(`input[name="question_${qId}"]:checked`);
+                answers.push({
+                    questionId: parseInt(qId),
+                    selectedOption: selected ? selected.value : ""
+                });
+            });
+
+            try {
+                const result = await ExamAPI.submit({
+                    studentId: currentUser.userId,
+                    examId: parseInt(examId),
+                    answers
+                });
+
+                showResult(result);
+            } catch (err) {
+                alert("Error during submission: " + err.message);
+            }
+        }
+
+        async function showResult(result) {
+            document.getElementById("exam-intro").style.display = "none";
+            document.getElementById("exam-body").style.display = "none";
+            document.getElementById("exam-timer-display").style.display = "none";
+
+            const resultView = document.getElementById("exam-result-view");
+            resultView.style.display = "block";
+
+            document.getElementById("result-score").innerText = `${result.score} / ${result.totalMarks}`;
+            document.getElementById("result-percentage").innerText = `${result.percentage.toFixed(1)}%`;
+
+            const actions = document.getElementById("result-actions");
+
+            if (result.status === "PASSED") {
+                document.getElementById("result-icon").innerText = "🏆";
+                document.getElementById("result-title").innerText = "Congratulations! You Passed!";
+                document.getElementById("result-subtitle").innerText = "Your digital certificate with verified QR code has been generated automatically!";
+                document.getElementById("result-percentage").style.color = "var(--accent)";
+
+                // Fetch generated cert
+                const certs = await CertAPI.getStudentCertificates(currentUser.userId);
+                const cert = certs.find(c => c.course.id === examData.course.id);
+
+                let certBtnHtml = '';
+                if (cert) {
+                    certBtnHtml = `
+                        <a href="${CertAPI.getPdfUrl(cert.certificateId)}" target="_blank" class="btn btn-accent btn-lg">📥 Download Certificate PDF</a>
+                        <a href="verify.html?id=${encodeURIComponent(cert.certificateId)}" target="_blank" class="btn btn-primary btn-lg">🔍 Verify Authenticity</a>
+                    `;
+                }
+
+                actions.innerHTML = `
+                    ${certBtnHtml}
+                    <a href="student-dashboard.html" class="btn btn-secondary btn-lg">Back to Dashboard</a>
+                `;
+            } else {
+                document.getElementById("result-icon").innerText = "❌";
+                document.getElementById("result-title").innerText = "Assessment Not Cleared";
+                document.getElementById("result-subtitle").innerText = `Required passing percentage was ${examData.passMarkPercentage}%. Review course modules and try again.`;
+                document.getElementById("result-percentage").style.color = "var(--danger)";
+
+                actions.innerHTML = `
+                    <button onclick="location.reload()" class="btn btn-primary btn-lg">🔄 Retake Examination</button>
+                    <a href="student-dashboard.html" class="btn btn-secondary btn-lg">Back to Dashboard</a>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

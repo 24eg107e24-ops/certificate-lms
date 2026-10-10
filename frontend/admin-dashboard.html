@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administrator Dashboard - CertLMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS <span style="font-size:0.8rem; background:#fee2e2; color:#dc2626; padding:2px 8px; border-radius:12px; margin-left:6px;">Administrator</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="verify.html">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <span id="user-display" style="font-weight: 600; font-size: 0.9rem;"></span>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-sm">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div style="margin-bottom: 2rem;">
+            <h2>System Administration & Oversight</h2>
+            <p style="color: var(--text-muted);">Manage platform accounts, monitor courses, audit assessments, and review issued digital credentials.</p>
+        </div>
+
+        <!-- Metric KPI Cards -->
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); margin-bottom: 2.5rem;">
+            <div class="card" style="border-left: 4px solid var(--primary);">
+                <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">TOTAL USERS</span>
+                <h2 id="stat-users" style="font-size: 2.2rem; color: var(--secondary); margin-top: 0.25rem;">0</h2>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--warning);">
+                <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">TOTAL COURSES</span>
+                <h2 id="stat-courses" style="font-size: 2.2rem; color: var(--secondary); margin-top: 0.25rem;">0</h2>
+            </div>
+            <div class="card" style="border-left: 4px solid var(--accent);">
+                <span style="color: var(--text-muted); font-size: 0.85rem; font-weight: 600;">CERTIFICATES ISSUED</span>
+                <h2 id="stat-certs" style="font-size: 2.2rem; color: var(--secondary); margin-top: 0.25rem;">0</h2>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('users', this)">👥 All Users</button>
+            <button class="tab-btn" onclick="switchTab('courses', this)">📚 All Courses</button>
+            <button class="tab-btn" onclick="switchTab('certs', this)">📜 All Issued Certificates</button>
+        </div>
+
+        <!-- TAB 1: ALL USERS -->
+        <div id="tab-users" class="tab-content active">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Registration Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users-table-body">
+                        <tr><td colspan="5" style="text-align: center;">Loading users...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 2: ALL COURSES -->
+        <div id="tab-courses" class="tab-content">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Course ID</th>
+                            <th>Title</th>
+                            <th>Category</th>
+                            <th>Instructor</th>
+                            <th>Created Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="courses-table-body">
+                        <tr><td colspan="5" style="text-align: center;">Loading courses...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 3: ALL CERTIFICATES -->
+        <div id="tab-certs" class="tab-content">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Certificate ID</th>
+                            <th>Student</th>
+                            <th>Course</th>
+                            <th>Score (%)</th>
+                            <th>Issue Date</th>
+                            <th>QR Code</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="certs-table-body">
+                        <tr><td colspan="7" style="text-align: center;">Loading certificates...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        let currentUser = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            currentUser = Auth.requireAuth(["ADMIN"]);
+            if (!currentUser) return;
+
+            document.getElementById("user-display").innerText = `${currentUser.name}`;
+            loadStats();
+            loadUsers();
+        });
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            
+            btn.classList.add("active");
+            document.getElementById(`tab-${tabId}`).classList.add("active");
+
+            if (tabId === "users") loadUsers();
+            if (tabId === "courses") loadCourses();
+            if (tabId === "certs") loadCertificates();
+        }
+
+        async function loadStats() {
+            try {
+                const stats = await AdminAPI.getStats();
+                document.getElementById("stat-users").innerText = stats.totalUsers || 0;
+                document.getElementById("stat-courses").innerText = stats.totalCourses || 0;
+                document.getElementById("stat-certs").innerText = stats.totalCertificates || 0;
+            } catch (err) {
+                console.error("Failed to load statistics:", err);
+            }
+        }
+
+        async function loadUsers() {
+            const tbody = document.getElementById("users-table-body");
+            try {
+                const users = await AdminAPI.getUsers();
+                tbody.innerHTML = users.map(u => `
+                    <tr>
+                        <td><strong>#${u.id}</strong></td>
+                        <td>${u.name}</td>
+                        <td>${u.email}</td>
+                        <td>
+                            <span class="badge ${u.role === 'ADMIN' ? 'badge-danger' : (u.role === 'INSTRUCTOR' ? 'badge-warning' : 'badge-primary')}">
+                                ${u.role}
+                            </span>
+                        </td>
+                        <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">${err.message}</td></tr>`;
+            }
+        }
+
+        async function loadCourses() {
+            const tbody = document.getElementById("courses-table-body");
+            try {
+                const courses = await CourseAPI.getAll();
+                tbody.innerHTML = courses.map(c => `
+                    <tr>
+                        <td><strong>#${c.id}</strong></td>
+                        <td>${c.title}</td>
+                        <td><span class="badge badge-primary">${c.category || 'General'}</span></td>
+                        <td>${c.instructor ? c.instructor.name : 'Unassigned'}</td>
+                        <td>${new Date(c.createdAt).toLocaleDateString()}</td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:red;">${err.message}</td></tr>`;
+            }
+        }
+
+        async function loadCertificates() {
+            const tbody = document.getElementById("certs-table-body");
+            try {
+                const certs = await CertAPI.getAll();
+                if (!certs || certs.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No certificates issued yet.</td></tr>`;
+                    return;
+                }
+                tbody.innerHTML = certs.map(c => `
+                    <tr>
+                        <td><code>${c.certificateId}</code></td>
+                        <td><strong>${c.student.name}</strong></td>
+                        <td>${c.course.title}</td>
+                        <td>${c.scorePercentage ? c.scorePercentage.toFixed(1) : 0}%</td>
+                        <td>${c.issueDate}</td>
+                        <td>
+                            ${c.qrCodeBase64 ? `<img src="${c.qrCodeBase64}" alt="QR" style="width: 45px; height: 45px; border-radius: 4px;">` : 'N/A'}
+                        </td>
+                        <td>
+                            <a href="${CertAPI.getPdfUrl(c.certificateId)}" target="_blank" class="btn btn-primary btn-sm" style="padding: 2px 8px;">PDF</a>
+                            <a href="verify.html?id=${encodeURIComponent(c.certificateId)}" target="_blank" class="btn btn-secondary btn-sm" style="padding: 2px 8px;">Verify</a>
+                        </td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:red;">${err.message}</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

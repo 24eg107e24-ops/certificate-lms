@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Certificate Verification - CertLMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="verify.html" class="active">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <a href="login.html" class="btn btn-secondary btn-sm">Login</a>
+                <a href="register.html" class="btn btn-primary btn-sm">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <h1>Online Certificate Verification Registry</h1>
+            <p style="color: var(--text-muted); max-width: 600px; margin: 0.5rem auto;">
+                Verify educational credentials issued by our LMS. Authenticate certificates using unique identification codes or scanned QR codes.
+            </p>
+        </div>
+
+        <!-- Search Input -->
+        <div class="form-card" style="max-width: 600px; margin: 0 auto 2.5rem auto;">
+            <form onsubmit="handleSearch(event)">
+                <div class="form-group">
+                    <label for="search-id">Enter Unique Certificate ID</label>
+                    <div class="search-input-group">
+                        <input type="text" id="search-id" class="form-control" placeholder="e.g. CERT-2026-XXXXXXXX" required>
+                        <button type="submit" class="btn btn-primary">Verify</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Results Area -->
+        <div id="verify-result" style="display: none;">
+            <!-- Rendered Certificate Card -->
+        </div>
+
+        <!-- Invalid Status Area -->
+        <div id="verify-error" style="display: none; max-width: 600px; margin: 0 auto; text-align: center;">
+            <div class="card" style="border: 2px solid var(--danger); padding: 2rem;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+                <h3 style="color: var(--danger); margin-bottom: 0.5rem;">Certificate Verification Failed</h3>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">
+                    The Certificate ID you entered could not be found in our institutional registry. Please check for typos or contact the administration.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const idParam = urlParams.get("id");
+            if (idParam) {
+                document.getElementById("search-id").value = idParam;
+                executeVerification(idParam);
+            }
+        });
+
+        function handleSearch(e) {
+            e.preventDefault();
+            const id = document.getElementById("search-id").value.trim();
+            if (id) {
+                executeVerification(id);
+            }
+        }
+
+        async function executeVerification(certId) {
+            const resultBox = document.getElementById("verify-result");
+            const errorBox = document.getElementById("verify-error");
+            resultBox.style.display = "none";
+            errorBox.style.display = "none";
+
+            try {
+                const cert = await CertAPI.verify(certId);
+                
+                resultBox.innerHTML = `
+                    <div class="certificate-frame">
+                        <div style="display: inline-block; background: #dcfce7; color: #166534; font-weight: 700; font-size: 0.85rem; padding: 4px 16px; border-radius: 999px; margin-bottom: 1.5rem; border: 1px solid #bbf7d0;">
+                            ✓ OFFICIAL & VERIFIED AUTHENTIC
+                        </div>
+                        <h2>CERTIFICATE OF COMPLETION</h2>
+                        <p style="color: var(--text-muted); font-size: 1.1rem; margin-top: 0.5rem;">This certifies that</p>
+                        
+                        <div class="certificate-name">${cert.student ? cert.student.name : 'Candidate'}</div>
+                        
+                        <p style="color: var(--text-muted); font-size: 1rem;">
+                            has successfully completed all modules and cleared the examination for
+                        </p>
+                        <h3 style="color: #1e3a8a; font-size: 1.4rem; margin: 1rem 0;">${cert.course ? cert.course.title : 'Course'}</h3>
+                        
+                        <div style="font-weight: 600; font-size: 1.05rem; margin-bottom: 1.5rem;">
+                            Grade Score: <span style="color: #10b981;">${cert.scorePercentage ? cert.scorePercentage.toFixed(1) : 0}%</span> &bull; Issue Date: ${cert.issueDate}
+                        </div>
+
+                        ${cert.qrCodeBase64 ? `<img src="${cert.qrCodeBase64}" class="certificate-qr" alt="QR Code">` : ''}
+
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                            Certificate ID: <strong>${cert.certificateId}</strong><br>
+                            Issued by Certificate Management LMS &bull; Verified Online
+                        </p>
+
+                        <div style="margin-top: 2rem;">
+                            <a href="${CertAPI.getPdfUrl(cert.certificateId)}" target="_blank" class="btn btn-primary btn-lg">
+                                📥 Download Certified PDF
+                            </a>
+                        </div>
+                    </div>
+                `;
+                resultBox.style.display = "block";
+            } catch (err) {
+                errorBox.style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>

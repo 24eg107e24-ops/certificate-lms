@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Dashboard - CertLMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS <span style="font-size:0.8rem; background:#fef3c7; color:#d97706; padding:2px 8px; border-radius:12px; margin-left:6px;">Instructor</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="verify.html">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <span id="user-display" style="font-weight: 600; font-size: 0.9rem;"></span>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-sm">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div style="margin-bottom: 2rem;">
+            <h2>Instructor Portal</h2>
+            <p style="color: var(--text-muted);">Manage your curriculum, author learning modules, and conduct certification assessments.</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('courses', this)">📋 My Courses</button>
+            <button class="tab-btn" onclick="switchTab('new-course', this)">➕ Create Course</button>
+            <button class="tab-btn" onclick="switchTab('add-material', this)">📖 Add Material</button>
+            <button class="tab-btn" onclick="switchTab('create-exam', this)">✍️ Create Exam</button>
+        </div>
+
+        <!-- TAB 1: MY COURSES -->
+        <div id="tab-courses" class="tab-content active">
+            <div class="grid" id="my-courses-list">
+                <p>Loading your courses...</p>
+            </div>
+        </div>
+
+        <!-- TAB 2: CREATE COURSE -->
+        <div id="tab-new-course" class="tab-content">
+            <div class="form-card" style="max-width: 650px;">
+                <h3>Create New Course</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Add a new educational course for students to enroll in.</p>
+                <form id="create-course-form" onsubmit="handleCreateCourse(event)">
+                    <div class="form-group">
+                        <label for="course-title">Course Title</label>
+                        <input type="text" id="course-title" class="form-control" placeholder="e.g. Deep Learning & Neural Networks" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="course-category">Category / Specialization</label>
+                        <input type="text" id="course-category" class="form-control" placeholder="e.g. Artificial Intelligence, Web Development" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="course-desc">Course Description & Syllabus</label>
+                        <textarea id="course-desc" class="form-control" placeholder="Detailed outline of the course..." rows="4" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Publish Course</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 3: ADD MATERIAL -->
+        <div id="tab-add-material" class="tab-content">
+            <div class="form-card" style="max-width: 650px;">
+                <h3>Add Learning Material / Module</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">Upload study notes and curriculum materials to a course.</p>
+                <form id="add-material-form" onsubmit="handleAddMaterial(event)">
+                    <div class="form-group">
+                        <label for="material-course-select">Select Course</label>
+                        <select id="material-course-select" class="form-control" required>
+                            <option value="">Select a course...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="material-title">Module Title</label>
+                        <input type="text" id="material-title" class="form-control" placeholder="e.g. Lesson 1: Mathematical Foundations" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="material-order">Order / Sequence Number</label>
+                        <input type="number" id="material-order" class="form-control" value="1" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="material-content">Study Content / Notes</label>
+                        <textarea id="material-content" class="form-control" placeholder="Enter lesson notes, guide, or references..." rows="6" required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Add Lesson Module</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 4: CREATE EXAM -->
+        <div id="tab-create-exam" class="tab-content">
+            <div class="form-card" style="max-width: 800px;">
+                <h3>Create Certification Exam & Questions</h3>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 1.5rem;">
+                    Design an assessment. Passing this exam will trigger automatic certificate generation for the student!
+                </p>
+                <form id="create-exam-form" onsubmit="handleCreateExam(event)">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label for="exam-course-select">Select Target Course</label>
+                            <select id="exam-course-select" class="form-control" required>
+                                <option value="">Select course...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="exam-title">Exam Title</label>
+                            <input type="text" id="exam-title" class="form-control" placeholder="e.g. Final Certification Test" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="exam-passmark">Pass Mark Percentage (%)</label>
+                            <input type="number" id="exam-passmark" class="form-control" value="50" min="10" max="100" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="exam-duration">Duration (Minutes)</label>
+                            <input type="number" id="exam-duration" class="form-control" value="30" min="5" required>
+                        </div>
+                    </div>
+
+                    <h4 style="margin: 1.5rem 0 0.75rem 0; color: var(--secondary);">Exam Questions</h4>
+                    <div id="questions-container" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <!-- Question blocks added here -->
+                    </div>
+
+                    <button type="button" onclick="addQuestionBlock()" class="btn btn-secondary btn-sm" style="margin: 1rem 0;">
+                        ➕ Add Another Question
+                    </button>
+
+                    <button type="submit" class="btn btn-accent" style="width: 100%; margin-top: 1rem;">
+                        Save & Publish Examination
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        let currentUser = null;
+        let instructorCourses = [];
+        let questionCount = 0;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            currentUser = Auth.requireAuth(["INSTRUCTOR", "ADMIN"]);
+            if (!currentUser) return;
+
+            document.getElementById("user-display").innerText = `${currentUser.name}`;
+            loadInstructorCourses();
+            addQuestionBlock(); // initialize with 1 question
+        });
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            
+            btn.classList.add("active");
+            document.getElementById(`tab-${tabId}`).classList.add("active");
+
+            if (tabId === "courses") loadInstructorCourses();
+        }
+
+        async function loadInstructorCourses() {
+            const container = document.getElementById("my-courses-list");
+            const selectMat = document.getElementById("material-course-select");
+            const selectExam = document.getElementById("exam-course-select");
+
+            try {
+                // If admin, load all; if instructor, load their courses
+                instructorCourses = (currentUser.role === "ADMIN") 
+                    ? await CourseAPI.getAll() 
+                    : await CourseAPI.getByInstructor(currentUser.userId);
+
+                // Populate selects
+                const options = `<option value="">Select course...</option>` + 
+                    instructorCourses.map(c => `<option value="${c.id}">${c.title}</option>`).join("");
+                selectMat.innerHTML = options;
+                selectExam.innerHTML = options;
+
+                if (!instructorCourses || instructorCourses.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: white; border-radius: 8px;">
+                            <p style="color: var(--text-muted); margin-bottom: 1rem;">You haven't created any courses yet.</p>
+                            <button onclick="switchTab('new-course', document.querySelectorAll('.tab-btn')[1])" class="btn btn-primary btn-sm">Create First Course</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = instructorCourses.map(course => `
+                    <div class="card">
+                        <div>
+                            <div class="card-header">
+                                <span class="badge badge-primary">${course.category || 'General'}</span>
+                                <small style="color: var(--text-muted);">ID: ${course.id}</small>
+                            </div>
+                            <h3 class="card-title">${course.title}</h3>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+                                ${course.description || ''}
+                            </p>
+                        </div>
+                        <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="prefillAddMaterial(${course.id})" class="btn btn-secondary btn-sm">➕ Add Lesson</button>
+                            <button onclick="prefillCreateExam(${course.id})" class="btn btn-primary btn-sm">✍️ Add Exam</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Error loading courses: ${err.message}</p>`;
+            }
+        }
+
+        async function handleCreateCourse(e) {
+            e.preventDefault();
+            const title = document.getElementById("course-title").value.trim();
+            const category = document.getElementById("course-category").value.trim();
+            const description = document.getElementById("course-desc").value.trim();
+
+            try {
+                await CourseAPI.create({
+                    title,
+                    category,
+                    description,
+                    instructorId: currentUser.userId
+                });
+                showToast("Course created successfully!", "success");
+                document.getElementById("create-course-form").reset();
+                switchTab('courses', document.querySelectorAll('.tab-btn')[0]);
+            } catch (err) {
+                showToast(err.message || "Failed to create course", "error");
+            }
+        }
+
+        function prefillAddMaterial(courseId) {
+            switchTab('add-material', document.querySelectorAll('.tab-btn')[2]);
+            document.getElementById("material-course-select").value = courseId;
+        }
+
+        async function handleAddMaterial(e) {
+            e.preventDefault();
+            const courseId = document.getElementById("material-course-select").value;
+            const title = document.getElementById("material-title").value.trim();
+            const orderIndex = parseInt(document.getElementById("material-order").value);
+            const content = document.getElementById("material-content").value.trim();
+
+            try {
+                await CourseAPI.addMaterial(courseId, {
+                    title,
+                    contentType: "TEXT",
+                    orderIndex,
+                    content
+                });
+                showToast("Learning module added successfully!", "success");
+                document.getElementById("add-material-form").reset();
+            } catch (err) {
+                showToast(err.message || "Failed to add module", "error");
+            }
+        }
+
+        function prefillCreateExam(courseId) {
+            switchTab('create-exam', document.querySelectorAll('.tab-btn')[3]);
+            document.getElementById("exam-course-select").value = courseId;
+        }
+
+        function addQuestionBlock() {
+            questionCount++;
+            const container = document.getElementById("questions-container");
+            const qDiv = document.createElement("div");
+            qDiv.className = "question-block";
+            qDiv.id = `q-block-${questionCount}`;
+            qDiv.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                    <strong>Question #${questionCount}</strong>
+                    ${questionCount > 1 ? `<button type="button" onclick="this.closest('.question-block').remove()" class="btn btn-danger btn-sm" style="padding: 2px 6px;">Remove</button>` : ''}
+                </div>
+                <div class="form-group">
+                    <input type="text" class="form-control q-text" placeholder="Enter Question Statement..." required>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" class="form-control q-opt-a" placeholder="Option A" required>
+                    <input type="text" class="form-control q-opt-b" placeholder="Option B" required>
+                    <input type="text" class="form-control q-opt-c" placeholder="Option C" required>
+                    <input type="text" class="form-control q-opt-d" placeholder="Option D" required>
+                </div>
+                <div style="display: flex; gap: 1rem; align-items: center;">
+                    <label style="font-size: 0.85rem; font-weight: 600;">Correct Option:</label>
+                    <select class="form-control q-correct" style="width: 120px;" required>
+                        <option value="A">Option A</option>
+                        <option value="B">Option B</option>
+                        <option value="C">Option C</option>
+                        <option value="D">Option D</option>
+                    </select>
+                    <label style="font-size: 0.85rem; font-weight: 600;">Marks:</label>
+                    <input type="number" class="form-control q-marks" value="1" min="1" style="width: 80px;" required>
+                </div>
+            `;
+            container.appendChild(qDiv);
+        }
+
+        async function handleCreateExam(e) {
+            e.preventDefault();
+            const courseId = document.getElementById("exam-course-select").value;
+            const title = document.getElementById("exam-title").value.trim();
+            const passMarkPercentage = parseFloat(document.getElementById("exam-passmark").value);
+            const durationMinutes = parseInt(document.getElementById("exam-duration").value);
+
+            const questionBlocks = document.querySelectorAll(".question-block");
+            const questions = [];
+
+            questionBlocks.forEach(qb => {
+                questions.push({
+                    questionText: qb.querySelector(".q-text").value.trim(),
+                    optionA: qb.querySelector(".q-opt-a").value.trim(),
+                    optionB: qb.querySelector(".q-opt-b").value.trim(),
+                    optionC: qb.querySelector(".q-opt-c").value.trim(),
+                    optionD: qb.querySelector(".q-opt-d").value.trim(),
+                    correctOption: qb.querySelector(".q-correct").value,
+                    marks: parseInt(qb.querySelector(".q-marks").value)
+                });
+            });
+
+            if (questions.length === 0) {
+                showToast("Please add at least one question.", "warning");
+                return;
+            }
+
+            try {
+                await ExamAPI.create({
+                    courseId,
+                    title,
+                    passMarkPercentage,
+                    durationMinutes,
+                    questions
+                });
+                showToast("Examination created successfully!", "success");
+                document.getElementById("create-exam-form").reset();
+                switchTab('courses', document.querySelectorAll('.tab-btn')[0]);
+            } catch (err) {
+                showToast(err.message || "Failed to create exam", "error");
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - CertLMS</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <div class="navbar">
+            <a href="index.html" class="logo">🎓 CertLMS <span style="font-size:0.8rem; background:#eff6ff; color:#2563eb; padding:2px 8px; border-radius:12px; margin-left:6px;">Student</span></a>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="verify.html">Verify Certificate</a></li>
+            </ul>
+            <div class="auth-buttons">
+                <span id="user-display" style="font-weight: 600; font-size: 0.9rem;"></span>
+                <button onclick="Auth.logout()" class="btn btn-secondary btn-sm">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div style="margin-bottom: 2rem;">
+            <h2>Student Learning Dashboard</h2>
+            <p style="color: var(--text-muted);">Access course content, attempt certification assessments, and claim your verified digital certificates.</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('my-courses', this)">📚 My Enrolled Courses</button>
+            <button class="tab-btn" onclick="switchTab('catalog', this)">🌐 Course Catalog</button>
+            <button class="tab-btn" onclick="switchTab('certificates', this)">📜 My Certificates</button>
+            <button class="tab-btn" onclick="switchTab('results', this)">📊 Exam Results</button>
+        </div>
+
+        <!-- TAB 1: MY COURSES -->
+        <div id="tab-my-courses" class="tab-content active">
+            <div class="grid" id="enrolled-courses-list">
+                <p style="color: var(--text-muted);">Loading your enrolled courses...</p>
+            </div>
+        </div>
+
+        <!-- TAB 2: COURSE CATALOG -->
+        <div id="tab-catalog" class="tab-content">
+            <div class="grid" id="catalog-courses-list">
+                <p style="color: var(--text-muted);">Loading courses catalog...</p>
+            </div>
+        </div>
+
+        <!-- TAB 3: CERTIFICATES -->
+        <div id="tab-certificates" class="tab-content">
+            <div class="grid" id="certificates-list">
+                <p style="color: var(--text-muted);">Loading your certificates...</p>
+            </div>
+        </div>
+
+        <!-- TAB 4: EXAM RESULTS -->
+        <div id="tab-results" class="tab-content">
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Exam Name</th>
+                            <th>Course</th>
+                            <th>Score</th>
+                            <th>Total Marks</th>
+                            <th>Percentage</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="results-table-body">
+                        <tr><td colspan="7" style="text-align: center;">Loading results...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Course Content / Materials Modal -->
+    <div id="material-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center;">
+        <div style="background:white; border-radius:var(--radius); max-width:700px; width:90%; max-height:85vh; overflow-y:auto; padding:2rem; position:relative;">
+            <button onclick="closeModal()" style="position:absolute; right:15px; top:15px; font-size:1.5rem; background:none; border:none; cursor:pointer;">&times;</button>
+            <h3 id="modal-course-title" style="margin-bottom:1rem; color:var(--primary);">Course Lessons & Learning Materials</h3>
+            <div id="modal-materials-content" style="display:flex; flex-direction:column; gap:1rem;">
+                <p>Loading materials...</p>
+            </div>
+            <div style="margin-top:2rem; text-align:right;">
+                <button onclick="closeModal()" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Certificate Management LMS | <strong>K.Deekshitha (24EG107E24) AIML-E</strong></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        let currentUser = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            currentUser = Auth.requireAuth(["STUDENT"]);
+            if (!currentUser) return;
+
+            document.getElementById("user-display").innerText = `${currentUser.name}`;
+            loadEnrolledCourses();
+            loadCertificates();
+            loadResults();
+        });
+
+        function switchTab(tabId, btn) {
+            document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+            document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+            
+            btn.classList.add("active");
+            document.getElementById(`tab-${tabId}`).classList.add("active");
+
+            if (tabId === "catalog") loadCatalog();
+            if (tabId === "my-courses") loadEnrolledCourses();
+            if (tabId === "certificates") loadCertificates();
+            if (tabId === "results") loadResults();
+        }
+
+        async function loadEnrolledCourses() {
+            const container = document.getElementById("enrolled-courses-list");
+            try {
+                const enrollments = await CourseAPI.getStudentEnrollments(currentUser.userId);
+                if (!enrollments || enrollments.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: white; border-radius: 8px;">
+                            <p style="color: var(--text-muted); margin-bottom: 1rem;">You are not currently enrolled in any courses.</p>
+                            <button onclick="switchTab('catalog', document.querySelectorAll('.tab-btn')[1])" class="btn btn-primary btn-sm">Explore Course Catalog</button>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = enrollments.map(e => `
+                    <div class="card">
+                        <div>
+                            <div class="card-header">
+                                <span class="badge ${e.status === 'COMPLETED' ? 'badge-success' : 'badge-primary'}">${e.status}</span>
+                                <small style="color: var(--text-muted);">Progress: ${e.progressPercentage || 0}%</small>
+                            </div>
+                            <h3 class="card-title">${e.course.title}</h3>
+                            <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+                                ${e.course.description || ''}
+                            </p>
+                            <div style="background: #e2e8f0; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 1rem;">
+                                <div style="background: var(--accent); width: ${e.progressPercentage || 0}%; height: 100%;"></div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1.5rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                            <button onclick="viewMaterials(${e.course.id}, '${escapeHtml(e.course.title)}')" class="btn btn-secondary btn-sm">📖 Study Lessons</button>
+                            <button onclick="startExamForCourse(${e.course.id})" class="btn btn-accent btn-sm">✍️ Take Exam</button>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Error loading courses: ${err.message}</p>`;
+            }
+        }
+
+        async function loadCatalog() {
+            const container = document.getElementById("catalog-courses-list");
+            try {
+                const courses = await CourseAPI.getAll();
+                const enrollments = await CourseAPI.getStudentEnrollments(currentUser.userId);
+                const enrolledIds = enrollments.map(e => e.course.id);
+
+                if (!courses || courses.length === 0) {
+                    container.innerHTML = `<p style="grid-column: 1/-1; text-align:center;">No courses found in catalog.</p>`;
+                    return;
+                }
+
+                container.innerHTML = courses.map(course => {
+                    const isEnrolled = enrolledIds.includes(course.id);
+                    return `
+                        <div class="card">
+                            <div>
+                                <div class="card-header">
+                                    <span class="badge badge-primary">${course.category || 'Course'}</span>
+                                    <small style="color: var(--text-muted);">${course.instructor ? course.instructor.name : 'Faculty'}</small>
+                                </div>
+                                <h3 class="card-title">${course.title}</h3>
+                                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem;">
+                                    ${course.description || ''}
+                                </p>
+                            </div>
+                            <div style="margin-top: 1.5rem;">
+                                ${isEnrolled ? 
+                                    `<span class="badge badge-success" style="padding: 0.5rem 1rem;">Already Enrolled</span>` :
+                                    `<button onclick="enrollInCourse(${course.id})" class="btn btn-primary btn-sm">Enroll Now</button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join("");
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Error loading catalog: ${err.message}</p>`;
+            }
+        }
+
+        async function enrollInCourse(courseId) {
+            try {
+                await CourseAPI.enroll(courseId, currentUser.userId);
+                showToast("Enrolled successfully!", "success");
+                loadCatalog();
+            } catch (err) {
+                showToast(err.message || "Failed to enroll", "error");
+            }
+        }
+
+        async function viewMaterials(courseId, title) {
+            document.getElementById("modal-course-title").innerText = title;
+            const container = document.getElementById("modal-materials-content");
+            document.getElementById("material-modal").style.display = "flex";
+            container.innerHTML = "<p>Loading materials...</p>";
+
+            try {
+                const materials = await CourseAPI.getMaterials(courseId);
+                if (!materials || materials.length === 0) {
+                    container.innerHTML = `<p style="color:var(--text-muted);">No learning materials uploaded for this course yet.</p>`;
+                    return;
+                }
+
+                container.innerHTML = materials.map(m => `
+                    <div style="border: 1px solid var(--border); padding: 1rem; border-radius: var(--radius); background: #fafafa;">
+                        <h4 style="color: var(--secondary); margin-bottom: 0.4rem;">${m.title}</h4>
+                        <p style="white-space: pre-wrap; font-size: 0.9rem; color: var(--text-main);">${m.content}</p>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Failed to load materials.</p>`;
+            }
+        }
+
+        function closeModal() {
+            document.getElementById("material-modal").style.display = "none";
+        }
+
+        async function startExamForCourse(courseId) {
+            try {
+                const exams = await ExamAPI.getByCourse(courseId);
+                if (!exams || exams.length === 0) {
+                    showToast("No exam has been configured for this course yet.", "info");
+                    return;
+                }
+                const exam = exams[0]; // Take first exam for course
+                window.location.href = `exam.html?id=${exam.id}`;
+            } catch (err) {
+                showToast(err.message || "Could not start exam.", "error");
+            }
+        }
+
+        async function loadCertificates() {
+            const container = document.getElementById("certificates-list");
+            try {
+                const certs = await CertAPI.getStudentCertificates(currentUser.userId);
+                if (!certs || certs.length === 0) {
+                    container.innerHTML = `
+                        <div style="grid-column: 1/-1; text-align: center; padding: 2rem; background: white; border-radius: 8px;">
+                            <p style="color: var(--text-muted);">No certificates earned yet.</p>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                                Complete your course and pass the exam to automatically generate your official digital certificate with QR code!
+                            </p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = certs.map(c => `
+                    <div class="card" style="border: 2px solid #2563eb;">
+                        <div>
+                            <div class="card-header">
+                                <span class="badge badge-success">VERIFIED CERTIFICATE</span>
+                                <small style="color: var(--text-muted);">${c.issueDate}</small>
+                            </div>
+                            <h3 class="card-title">${c.course.title}</h3>
+                            <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.5rem 0;">
+                                Issued to: <strong>${c.student.name}</strong><br>
+                                Grade/Score: <strong>${c.scorePercentage ? c.scorePercentage.toFixed(1) : 0}%</strong><br>
+                                ID: <code style="background:#f1f5f9; padding:2px 6px; border-radius:4px; font-size:0.8rem;">${c.certificateId}</code>
+                            </p>
+                            ${c.qrCodeBase64 ? `<img src="${c.qrCodeBase64}" alt="Certificate QR" style="width: 100px; height: 100px; display: block; margin: 0.75rem auto; border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px;">` : ''}
+                        </div>
+                        <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: center;">
+                            <a href="${CertAPI.getPdfUrl(c.certificateId)}" target="_blank" class="btn btn-primary btn-sm">📥 Download PDF</a>
+                            <a href="verify.html?id=${encodeURIComponent(c.certificateId)}" class="btn btn-secondary btn-sm">🔍 Verify Online</a>
+                        </div>
+                    </div>
+                `).join("");
+            } catch (err) {
+                container.innerHTML = `<p style="color:red;">Error loading certificates: ${err.message}</p>`;
+            }
+        }
+
+        async function loadResults() {
+            const tbody = document.getElementById("results-table-body");
+            try {
+                const results = await ExamAPI.getStudentResults(currentUser.userId);
+                if (!results || results.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">No examination attempts recorded yet.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = results.map(r => `
+                    <tr>
+                        <td><strong>${r.exam ? r.exam.title : 'Assessment'}</strong></td>
+                        <td>${r.exam && r.exam.course ? r.exam.course.title : 'N/A'}</td>
+                        <td>${r.score}</td>
+                        <td>${r.totalMarks}</td>
+                        <td>${r.percentage ? r.percentage.toFixed(1) : 0}%</td>
+                        <td>
+                            <span class="badge ${r.status === 'PASSED' ? 'badge-success' : 'badge-danger'}">
+                                ${r.status}
+                            </span>
+                        </td>
+                        <td>${new Date(r.completedAt).toLocaleDateString()}</td>
+                    </tr>
+                `).join("");
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: red;">Error: ${err.message}</td></tr>`;
+            }
+        }
+
+        function escapeHtml(text) {
+            return text ? text.replace(/'/g, "\\'") : "";
+        }
+    </script>
+</body>
+</html>
